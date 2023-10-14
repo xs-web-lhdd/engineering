@@ -1,0 +1,32 @@
+{
+  "name": "@liu/init",
+  "version": "0.0.0",
+  "description": "init command",
+  "author": "",
+  "homepage": "",
+  "license": "ISC",
+  "main": "lib/index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmmirror.com/"
+  },
+  "scripts": {
+    "test": "node ./__tests__/init.test.js"
+  },
+  "dependencies": {
+    "@liu/command": "^0.0.0",
+    "@liu/utils": "^0.0.0",
+    "ejs": "^3.1.9",
+    "execa": "^8.0.1",
+    "glob": "8.0.3",
+    "ora": "^7.0.1",
+    "path-exists": "^5.0.0"
+  },
+  "type": "module"
+}
