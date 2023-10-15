@@ -30,11 +30,11 @@ function getProjectPath(cwd, fullName) {
   return path.resolve(cwd, projectName);
 }
 
-function getPackageJson(cwd, fullName) {
-  const projectPath = getProjectPath(cwd, fullName);
+function getPackageJson(projectPath) {
   const pkgPath = path.resolve(projectPath, "package.json");
+  console.log("pkgPath", pkgPath, pathExistsSync(pkgPath));
   if (pathExistsSync(pkgPath)) {
-    return fse.readFileSync();
+    return JSON.parse(fse.readFileSync(pkgPath).toString());
   } else return null;
 }
 
@@ -72,9 +72,11 @@ class GitServer {
 
   async runRepo(cwd, fullName) {
     const projectPath = getProjectPath(cwd, fullName);
-    const pkg = getPackageJson(cwd, fullName);
+    const pkg = getPackageJson(projectPath);
+    console.log("pkg", pkg);
     if (pkg) {
       const { scripts, bin, name } = pkg;
+      console.log("scripts, bin, name ---->>>>", scripts, bin, name);
       if (bin) {
         await execa("npm", ["install", "-g", name], {
           cwd: projectPath,
@@ -94,6 +96,9 @@ class GitServer {
       } else {
         log.warn("未找到启动信息！");
       }
+    } else {
+      // 无 pkg
+      log.warn("此项目根目录下无 package.json 请手动查看此项目");
     }
   }
 }

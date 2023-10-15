@@ -34,13 +34,18 @@ class InstallCommand extends Command {
     log.verbose("full_name", this.keyword);
     log.verbose("tag", this.selectedTag);
     await this.downloadRepo();
+    console.log(
+      "下载仓库------------------------------------------------------------------------------"
+    );
     await this.installDependencies();
+    console.log(
+      "安装依赖-------------------------------------------------------------------------------"
+    );
     await this.runRepo();
   }
 
   async runRepo() {
-    this.keyword = "111/vue-cesium";
-    await this.gitAPI.runRepo(process.cwd(), this.keyword);
+    this.keyword = await this.gitAPI.runRepo(process.cwd(), this.keyword);
   }
 
   async downloadRepo() {
@@ -52,6 +57,7 @@ class InstallCommand extends Command {
     } catch (error) {
       spinner.stop();
       log.warn("clone 仓库出错误！", error.message);
+      throw new Error("下载仓库失败！");
     }
   }
 
@@ -62,7 +68,7 @@ class InstallCommand extends Command {
     try {
       await this.gitAPI.installDependencies(process.cwd(), this.keyword);
       spinner.stop();
-      log.success(`安装依赖成功！${this.keyword}(${this.selectedTag}`);
+      log.success(`安装依赖成功！${this.keyword}(${this.selectedTag})`);
     } catch (error) {
       spinner.stop();
       log.warn("安装依赖失败, 请尝试手动安装依赖！");
@@ -128,12 +134,41 @@ class InstallCommand extends Command {
     if (platform === "github") {
       params = {
         // 三元运算符的优先级小于二元
-        q: q + (language ? `+language:${language}` : ""),
+        q: this.q + (this.language ? `+language:${this.language}` : ""),
         order: "desc",
         sort: "stars",
-        per_page: 10,
+        per_page: this.perPage,
         page: this.page,
       };
+      log.verbose("search params", params);
+
+      try {
+        searchResult = await this.gitAPI.searchRepository(params);
+      } catch (error) {
+        log.warn("searchRepository error", error.message);
+      }
+      log.verbose(`searchResult from ${platform}`, searchResult);
+
+      count = searchResult.items.length; // 当前页数据量
+      totalCount = searchResult.total_count;
+      list = searchResult.items.map((item) => ({
+        name: `${item.description.slice(0, 40)}`,
+        value: item.full_name,
+      }));
+
+      // 判断当前页数是否到达最大页
+      if (this.page * this.perPage < totalCount) {
+        list.push({
+          name: "下一页",
+          value: NEXT_PAGE,
+        });
+      }
+      if (this.page > 1) {
+        list.unshift({
+          name: "上一页",
+          value: PREV_PAGE,
+        });
+      }
     } else {
       // Gitee
       params = {
@@ -180,7 +215,7 @@ class InstallCommand extends Command {
       const keyword = await makeList({
         message:
           platform === "github"
-            ? `请选择要下载的项目(共${count}条数据)`
+            ? `请选择要下载的项目(共${totalCount}条数据)`
             : "请选择要下载的项目",
         choices: list,
       });
@@ -211,10 +246,16 @@ class InstallCommand extends Command {
 
   async doSelectTags() {
     const platform = this.gitAPI.getPlatform();
+    let tagsList;
     let tagsListChoices = [];
     if (platform === "github") {
+      tagsList = await this.gitAPI.getTags(this.keyword);
+      tagsListChoices = tagsList.map((item) => ({
+        name: item.name,
+        value: item.name,
+      }));
     } else {
-      const tagsList = await this.gitAPI.getTags(this.keyword);
+      tagsList = await this.gitAPI.getTags(this.keyword);
       tagsListChoices = tagsList.map((item) => ({
         name: item.name,
         value: item.name,
@@ -234,23 +275,22 @@ class InstallCommand extends Command {
       //     value: PREV_TAG,
       //   });
       // }
+    }
+    if (tagsList.length > 0) {
+      const selectedTag = await makeList({
+        message: "请选择 tag",
+        choices: tagsListChoices,
+      });
 
-      if (tagsList.length > 0) {
-        const selectedTag = await makeList({
-          message: "请选择 tag",
-          choices: tagsListChoices,
-        });
+      log.verbose("您选择的 tag 是：", selectedTag);
 
-        log.verbose("您选择的 tag 是：", selectedTag);
-
-        if (selectedTag === NEXT_TAG) {
-          await this.nextTag();
-        } else if (selectedTag === PREV_TAG) {
-          await this.prevTag();
-        } else {
-          // 下载tag
-          this.selectedTag = selectedTag;
-        }
+      if (selectedTag === NEXT_TAG) {
+        await this.nextTag();
+      } else if (selectedTag === PREV_TAG) {
+        await this.prevTag();
+      } else {
+        // 下载tag
+        this.selectedTag = selectedTag;
       }
     }
   }
@@ -260,6 +300,7 @@ class InstallCommand extends Command {
     this.tagPage = 1;
     this.tagPerPage = 10;
     if (this.gitAPI.getPlatform() === "github") {
+      tagsList = await this.doSelectTags();
     } else {
       // gitee 查询 tags
       tagsList = await this.doSelectTags();
