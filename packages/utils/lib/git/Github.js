@@ -45,7 +45,17 @@ class Github extends GitServer {
     });
   }
 
-  post() {}
+  post() {
+    return this.service({
+      url,
+      data: {
+        ...data,
+        // access_token: this.token,
+      },
+      method: "post",
+      headers,
+    });
+  }
 
   searchRepository(params) {
     return this.get("/search/repositories", params);
@@ -82,6 +92,26 @@ class Github extends GitServer {
       log.warn(`安装依赖出错 ${projectPath} 不存在`);
       throw new Error(`安装依赖出错 ${projectPath} 不存在`);
     }
+  }
+
+  getUser() {
+    return this.get("/user");
+  }
+
+  getOrg() {
+    return this.get("/user/orgs");
+  }
+
+  createRepo(name) {
+    if (this.own === "user")
+      return this.post("/user/repos", { name }); // 创建用户仓库
+    else return this.post(`/orgs/${this.login}/repos`, { name }); // 创建组织仓库
+  }
+
+  getRepoList() {
+    // https://gitee.com/api/v5/user/repos
+    // return this.get(`/users/${this.login}/repos`);
+    return this.get("/user/repos");
   }
 }
 

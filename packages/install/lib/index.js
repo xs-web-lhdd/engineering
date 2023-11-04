@@ -1,13 +1,6 @@
 import ora from "ora";
 import Command from "@liu/command";
-import {
-  log,
-  Github,
-  makeList,
-  getGitPlatform,
-  Gitee,
-  makeInput,
-} from "@liu/utils";
+import { log, makeList, makeInput, initGitServer } from "@liu/utils";
 
 const PREV_PAGE = "${prev_page}";
 const NEXT_PAGE = "${next_page}";
@@ -76,32 +69,7 @@ class InstallCommand extends Command {
   }
 
   async generateGitAPI() {
-    let platform = getGitPlatform();
-    if (!platform) {
-      platform = await makeList({
-        message: "请选择Git平台",
-        choices: [
-          {
-            name: "Github",
-            value: "github",
-          },
-          {
-            name: "Gitee",
-            value: "gitee",
-          },
-        ],
-      });
-    }
-    log.verbose("platform", platform);
-    let gitAPI;
-    if (platform === "github") {
-      gitAPI = new Github();
-    } else {
-      gitAPI = new Gitee();
-    }
-    gitAPI.savePlatform(platform);
-    await gitAPI.init(platform);
-    this.gitAPI = gitAPI;
+    this.gitAPI = await initGitServer();
   }
 
   async searchGitAPI() {
@@ -292,6 +260,8 @@ class InstallCommand extends Command {
         // 下载tag
         this.selectedTag = selectedTag;
       }
+    } else {
+      this.selectTags = "当前项目尚无Tag！";
     }
   }
 

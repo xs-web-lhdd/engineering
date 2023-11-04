@@ -30,14 +30,24 @@ class Gitee extends GitServer {
       url,
       params: {
         ...params,
-        // access_token: this.token,
+        access_token: this.token,
       },
       method: "get",
       headers,
     });
   }
 
-  post() {}
+  post(url, data, headers) {
+    return this.service({
+      url,
+      data: {
+        ...data,
+        access_token: this.token,
+      },
+      method: "post",
+      headers,
+    });
+  }
 
   searchRepository(params) {
     return this.get("/search/repositories", params);
@@ -68,6 +78,25 @@ class Gitee extends GitServer {
     } else {
       log.warn(`安装依赖出错 ${projectPath} 不存在`);
     }
+  }
+
+  getUser() {
+    return this.get("/user");
+  }
+
+  getOrg() {
+    return this.get("/user/orgs");
+  }
+
+  createRepo(name) {
+    if (this.own === "user")
+      return this.post("/user/repos", { name }); // 创建用户仓库
+    else return this.post(`/orgs/${this.login}/repos`, { name }); // 创建组织仓库
+  }
+
+  getRepoList() {
+    // https://gitee.com/api/v5/user/repos
+    return this.get("/user/repos");
   }
 }
 
